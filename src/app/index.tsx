@@ -1,16 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  Animated,
-  Pressable,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
-} from "react-native";
+import { router } from "expo-router";
+import { Alert, Animated, Pressable, ScrollView, StatusBar, StyleSheet, Text, TextInput, useWindowDimensions, View} from "react-native";
 
 const stories = [
   { icon: "✦", title: "The breakup", copy: "For the version of you who finally chose yourself.", tint: "#E8B8AA", accent: "#9C4B43" },
@@ -58,17 +48,19 @@ function Waveform({ light = false }: { light?: boolean }) {
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const isWide = width > 780;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const examplesOffset = useRef(0);
   const [story, setStory] = useState(
     "I’m 22, building things at 2AM between university classes. I miss home sometimes, drink too much coffee, and I’m convinced the best part of my life is still ahead of me."
   );
   const [playing, setPlaying] = useState(false);
 
-  const showCreate = () => Alert.alert("Your MyVerse is waiting", "Tell us a little about your world and we’ll find the song in it.");
+  const showCreate = () => router.push("/login");
 
   return (
     <View className="flex-1 bg-[#fcf8f1]">
       <StatusBar barStyle="dark-content" />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.page}>
+      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={styles.page}>
         <View style={styles.grain} pointerEvents="none" />
 
         <View className="mx-auto w-full max-w-[1180px] px-5 pt-5">
@@ -104,7 +96,10 @@ export default function HomeScreen() {
                 <Pressable onPress={showCreate} className="rounded-full bg-[#e9764e] px-6 py-4 shadow-sm active:scale-95">
                   <Text className="text-base font-bold text-white">Create my song  →</Text>
                 </Pressable>
-                <Pressable onPress={() => setPlaying(!playing)} className="flex-row items-center gap-2 py-3 active:opacity-70">
+                <Pressable
+                  onPress={() => scrollViewRef.current?.scrollTo({ y: examplesOffset.current - 24, animated: true })}
+                  className="flex-row items-center gap-2 py-3 active:opacity-70"
+                >
                   <View className="h-7 w-7 items-center justify-center rounded-full border border-[#cfc1b4]">
                     <Text className="ml-0.5 text-[10px] text-[#241a17]">{playing ? "Ⅱ" : "▶"}</Text>
                   </View>
@@ -157,10 +152,20 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <View className="mt-28">
+          <View
+            className="mt-28"
+            onLayout={(event) => {
+              examplesOffset.current = event.nativeEvent.layout.y;
+            }}
+          >
             <Text className="text-center text-4xl font-semibold tracking-tight text-[#241a17]">Made from moments</Text>
             <Text className="mx-auto mt-3 max-w-[470px] text-center text-base leading-6 text-[#75665e]">Every chapter has a rhythm. Here are a few ways people have heard theirs.</Text>
-            <View className="mt-10 flex-row flex-wrap justify-center gap-4">
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.storyRow}
+              className="mt-10 -mx-5"
+            >
               {stories.map((item) => (
                 <Pressable key={item.title} onPress={() => Alert.alert(item.title, "This story is ready to become a song.")} style={[styles.storyCard, { backgroundColor: item.tint }]} className="overflow-hidden rounded-[24px] p-5 active:scale-[0.98]">
                   <View style={[styles.storyOrb, { backgroundColor: item.accent }]} />
@@ -171,7 +176,7 @@ export default function HomeScreen() {
                   </View>
                 </Pressable>
               ))}
-            </View>
+            </ScrollView>
           </View>
 
           <View className="mt-28 items-center overflow-hidden rounded-[34px] bg-[#241a17] px-6 py-16" style={styles.snapshot}>
@@ -209,6 +214,7 @@ const styles = StyleSheet.create({
   playerWide: { marginTop: 0, marginLeft: 42 },
   player: { shadowColor: "#39231c", shadowOpacity: 0.27, shadowRadius: 28, shadowOffset: { width: 0, height: 15 }, elevation: 12 },
   fragment: { position: "absolute" },
+  storyRow: { gap: 16, paddingHorizontal: 20 },
   storyCard: { width: 260, height: 225 },
   storyOrb: { position: "absolute", width: 116, height: 116, borderRadius: 58, opacity: 0.16, right: -25, top: -25 },
   snapshot: { shadowColor: "#4d352c", shadowOpacity: 0.15, shadowRadius: 25, shadowOffset: { width: 0, height: 12 }, elevation: 6 },
