@@ -1,4 +1,14 @@
-# Welcome to your Expo app 👋
+# MyVerse
+
+MyVerse turns a user's own stories into music. The Expo client preserves the existing warm landing experience and adds cookie-backed authentication, creation, library, bookmarks, and profile flows. The API in `server/` provides MongoDB-backed users, songs, bookmarks, and a secure pending-generation workflow; it intentionally does not call an LLM or music provider.
+
+## Run
+
+1. Copy `.env.example` to `.env` and set `EXPO_PUBLIC_API_URL`.
+2. Copy `server/.env.example` to `server/.env`, configure MongoDB and `JWT_SECRET`.
+3. Run `npm start` for Expo and `cd server && npm run dev` for the API.
+
+No audio is presented as playable unless a trusted future worker sets a valid `audioUrl` and marks a song `completed`.
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
