@@ -11,6 +11,7 @@ async function song(songId, userId) {
     mongoose.isValidObjectId(songId) && Song.findOne({ _id: songId, userId })
   );
 }
+
 router.post("/:songId", async (req, res, next) => {
   try {
     const owned = await song(req.params.songId, req.userId);
@@ -25,6 +26,7 @@ router.post("/:songId", async (req, res, next) => {
     next(e);
   }
 });
+
 router.delete("/:songId", async (req, res, next) => {
   try {
     const owned = await song(req.params.songId, req.userId);
@@ -35,6 +37,8 @@ router.delete("/:songId", async (req, res, next) => {
     next(e);
   }
 });
+
+
 router.get("/", async (req, res, next) => {
   try {
     const rows = await Bookmark.find({ userId: req.userId })
@@ -50,4 +54,5 @@ router.get("/", async (req, res, next) => {
     next(e);
   }
 });
+
 export default router;
