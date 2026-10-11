@@ -1,3 +1,72 @@
-import { useEffect, useState } from "react"; import { router } from "expo-router"; import { Pressable, ScrollView, Text, TextInput, View } from "react-native"; import { api } from "../lib/api"; import { useAuth } from "../providers/auth"; import { AppNav } from "../components/app-nav";
-type Song = { _id: string; title?: string; genre: string; mood: string; status: string; createdAt: string; bookmarked: boolean };
-export default function Songs() { const { user } = useAuth(); const [songs, setSongs] = useState<Song[]>([]), [search, setSearch] = useState(""), [error, setError] = useState(""); const load = () => api<{ songs: Song[] }>(`/songs?search=${encodeURIComponent(search)}`).then((data) => setSongs(data.songs)).catch((e) => setError(e.message)); useEffect(() => { if (!user) router.replace("/login"); else load(); }, [user, search]); return <View className="flex-1 bg-[#fcf8f1]"><ScrollView className="flex-1 p-6"><Text className="text-3xl font-semibold text-[#241a17]">My Songs</Text><TextInput value={search} onChangeText={setSearch} placeholder="Search your songs" className="mt-5 rounded-xl bg-white p-4" />{!!error && <Text className="mt-3 text-red-700">{error}</Text>}{songs.length === 0 ? <Text className="mt-12 text-center text-[#75665e]">Your first MyVerse is waiting to be created.</Text> : songs.map((song) => <View key={song._id} className="mt-4 rounded-2xl bg-white p-5"><Text className="text-lg font-semibold text-[#241a17]">{song.title || "Untitled MyVerse"}</Text><Text className="mt-1 text-[#75665e]">{song.genre} · {song.mood} · {song.status}</Text><Pressable onPress={() => api(`/bookmarks/${song._id}`, { method: song.bookmarked ? "DELETE" : "POST" }).then(load)} className="mt-3"><Text className="text-[#9b633b]">{song.bookmarked ? "Remove bookmark" : "Bookmark"}</Text></Pressable></View>)}</ScrollView><AppNav /></View>; }
+import { useEffect, useState } from "react";
+import { router } from "expo-router";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { api } from "../lib/api";
+import { useAuth } from "../providers/auth";
+import { AppNav } from "../components/app-nav";
+type Song = {
+  _id: string;
+  title?: string;
+  genre: string;
+  mood: string;
+  status: string;
+  createdAt: string;
+  bookmarked: boolean;
+};
+export default function Songs() {
+  const { user } = useAuth();
+  const [songs, setSongs] = useState<Song[]>([]),
+    [search, setSearch] = useState(""),
+    [error, setError] = useState("");
+  const load = () =>
+    api<{ songs: Song[] }>(`/songs?search=${encodeURIComponent(search)}`)
+      .then((data) => setSongs(data.songs))
+      .catch((e) => setError(e.message));
+  useEffect(() => {
+    if (!user) router.replace("/login");
+    else load();
+  }, [user, search]);
+  return (
+    <View className="flex-1 bg-[#fcf8f1]">
+      <ScrollView className="flex-1 p-6">
+        <Text className="text-3xl font-semibold text-[#241a17]">My Songs</Text>
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search your songs"
+          className="mt-5 rounded-xl bg-white p-4"
+        />
+        {!!error && <Text className="mt-3 text-red-700">{error}</Text>}
+        {songs.length === 0 ? (
+          <Text className="mt-12 text-center text-[#75665e]">
+            Your first MyVerse is waiting to be created.
+          </Text>
+        ) : (
+          songs.map((song) => (
+            <View key={song._id} className="mt-4 rounded-2xl bg-white p-5">
+              <Text className="text-lg font-semibold text-[#241a17]">
+                {song.title || "Untitled MyVerse"}
+              </Text>
+              <Text className="mt-1 text-[#75665e]">
+                {song.genre} · {song.mood} · {song.status}
+              </Text>
+              <Pressable
+                onPress={() =>
+                  api(`/bookmarks/${song._id}`, {
+                    method: song.bookmarked ? "DELETE" : "POST",
+                  }).then(load)
+                }
+                className="mt-3"
+              >
+                <Text className="text-[#9b633b]">
+                  {song.bookmarked ? "Remove bookmark" : "Bookmark"}
+                </Text>
+              </Pressable>
+            </View>
+          ))
+        )}
+      </ScrollView>
+      <AppNav />
+    </View>
+  );
+}
