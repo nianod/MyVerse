@@ -57,7 +57,7 @@ export default function Login() {
         </Text>
       </Pressable>
       <Link href="/register" className="mt-5 text-center text-[#9b633b]">
-        New here? Create an account
+        New here? Create an account 
       </Link>
     </View>
   );
