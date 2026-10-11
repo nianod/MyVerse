@@ -7,8 +7,7 @@ import { generateAudio } from "./audioService.js";
 const audioDirectory = path.resolve(process.cwd(), "uploads", "audio");
 const safeError = "We couldn't create this MyVerse just now. Please try again.";
 
-// Deliberately detached from requests: it can later be moved to a queue unchanged.
-export function requestSongGeneration(song) {
+ export function requestSongGeneration(song) {
   void processSong(song.id);
 }
 
