@@ -59,7 +59,9 @@ router.patch("/me/passcode", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
-});
+})
+
+
 router.delete("/me", async (req, res, next) => {
   try {
     const body = z.object({ passcode: z.string() }).parse(req.body);
