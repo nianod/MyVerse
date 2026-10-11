@@ -10,6 +10,7 @@ import songs from "./routes/songs.js";
 import bookmarks from "./routes/bookmarks.js";
 import users from "./routes/users.js";
 import { errors, notFound } from "./middleware/errors.js";
+import { failStuckSongs } from "./services/generation.js";
 
 if (!process.env.MONGODB_URI || !process.env.JWT_SECRET)
   throw new Error("MONGODB_URI and JWT_SECRET must be configured.");
@@ -17,6 +18,7 @@ await mongoose.connect(process.env.MONGODB_URI).catch((error) => {
   console.error("MongoDB connection failed", { name: error.name });
   process.exit(1);
 });
+await failStuckSongs();
 
 const app = express();
 app.set("trust proxy", 1);
@@ -29,6 +31,7 @@ app.use(
 );
 app.use(express.json({ limit: "100kb" }));
 app.use(cookieParser());
+app.use("/uploads", express.static("uploads", { fallthrough: false, maxAge: "7d" }));
 app.use(
   "/api/auth",
   rateLimit({

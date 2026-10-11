@@ -18,16 +18,25 @@ const schema = new mongoose.Schema(
       maxlength: 60,
     },
     notes: { type: String, maxlength: 2000 },
-    lyrics: String,
+    lyrics: {
+      title: { type: String, trim: true, maxlength: 120 },
+      sections: [
+        {
+          type: { type: String, enum: ["verse", "chorus", "bridge", "outro"] },
+          lines: [{ type: String, trim: true, maxlength: 500 }],
+        },
+      ],
+    },
     audioUrl: String,
+    stylePrompt: { type: String, maxlength: 1000 },
     coverImageUrl: String,
     status: {
       type: String,
-      enum: ["pending", "processing", "completed", "failed"],
+      enum: ["pending", "generating_lyrics", "generating_audio", "ready", "failed"],
       default: "pending",
       index: true,
     },
-    generationError: String,
+    error: { type: String, maxlength: 500 },
   },
   { timestamps: true },
 );

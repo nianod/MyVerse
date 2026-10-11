@@ -5,27 +5,52 @@ import { Song } from "../models/Song.js";
 import { Bookmark } from "../models/Bookmark.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requestSongGeneration } from "../services/generation.js";
+import rateLimit from "express-rate-limit";
 const router = Router();
 router.use(requireAuth);
 const createSchema = z.object({
   title: z.string().trim().max(120).optional(),
-  story: z.string().trim().min(10).max(10000),
-  genre: z.string().trim().min(1).max(60),
-  mood: z.string().trim().min(1).max(60),
-  language: z.string().trim().min(1).max(60).default("English"),
+  story: z.string().trim().min(50).max(3000),
+  genre: z.enum(["Afrobeat", "Rap", "Gospel", "R&B", "Pop", "Acoustic"]),
+  mood: z.enum(["nostalgic", "hopeful", "joyful", "reflective", "heartbreak", "empowered"]),
+  language: z.enum(["English", "Swahili", "Sheng", "Kikuyu", "Luo", "Arabic"]).default("English"),
   notes: z.string().trim().max(2000).optional(),
 });
 const patchSchema = z.object({ title: z.string().trim().min(1).max(120) });
 const owned = (id, userId) => Song.findOne({ _id: id, userId });
-router.post("/", async (req, res, next) => {
+const creationLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => String(req.userId),
+  message: { error: "You can create up to 5 MyVerses per hour. Please try again later." },
+});
+router.post("/", creationLimit, async (req, res, next) => {
   try {
     const song = await Song.create({
       ...createSchema.parse(req.body),
       userId: req.userId,
       status: "pending",
     });
-    await requestSongGeneration(song);
+    requestSongGeneration(song);
     res.status(201).json({ song });
+  } catch (e) {
+    next(e);
+  }
+});
+router.post("/:songId/retry", async (req, res, next) => {
+  try {
+    const song = await owned(req.params.songId, req.userId);
+    if (!song) return res.status(404).json({ error: "Song not found." });
+    if (song.status !== "failed")
+      return res.status(409).json({ error: "Only failed MyVerses can be retried." });
+    song.status = "pending";
+    song.error = undefined;
+    song.audioUrl = undefined;
+    await song.save();
+    requestSongGeneration(song);
+    res.json({ song });
   } catch (e) {
     next(e);
   }
