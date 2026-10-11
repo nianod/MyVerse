@@ -1,7 +1,118 @@
-import { Router } from "express"; import { z } from "zod"; import mongoose from "mongoose"; import { Song } from "../models/Song.js"; import { Bookmark } from "../models/Bookmark.js"; import { requireAuth } from "../middleware/auth.js"; import { requestSongGeneration } from "../services/generation.js";
-const router = Router(); router.use(requireAuth); const createSchema = z.object({ title: z.string().trim().max(120).optional(), story: z.string().trim().min(10).max(10000), genre: z.string().trim().min(1).max(60), mood: z.string().trim().min(1).max(60), language: z.string().trim().min(1).max(60).default("English"), notes: z.string().trim().max(2000).optional() }); const patchSchema = z.object({ title: z.string().trim().min(1).max(120) }); const owned = (id, userId) => Song.findOne({ _id: id, userId });
-router.post("/", async (req, res, next) => { try { const song = await Song.create({ ...createSchema.parse(req.body), userId: req.userId, status: "pending" }); await requestSongGeneration(song); res.status(201).json({ song }); } catch (e) { next(e); } });
-router.get("/", async (req, res, next) => { try { const { page = "1", limit = "24", search = "", genre, mood, status, sort = "newest" } = req.query; const filter = { userId: req.userId, ...(genre ? { genre } : {}), ...(mood ? { mood } : {}), ...(status ? { status } : {}), ...(search ? { title: { $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), $options: "i" } } : {}) }; const [songs, total, bookmarked] = await Promise.all([Song.find(filter).sort({ createdAt: sort === "oldest" ? 1 : -1 }).skip((Math.max(1, Number(page)) - 1) * Math.min(100, Number(limit))).limit(Math.min(100, Number(limit))).lean(), Song.countDocuments(filter), Bookmark.find({ userId: req.userId }).select("songId").lean()]); const ids = new Set(bookmarked.map((item) => String(item.songId))); res.json({ songs: songs.map((song) => ({ ...song, bookmarked: ids.has(String(song._id)) })), total, page: Number(page) }); } catch (e) { next(e); } });
-router.get("/:songId", async (req, res, next) => { try { if (!mongoose.isValidObjectId(req.params.songId)) return res.status(404).json({ error: "Song not found." }); const song = await owned(req.params.songId, req.userId).lean(); if (!song) return res.status(404).json({ error: "Song not found." }); res.json({ song, bookmarked: Boolean(await Bookmark.exists({ userId: req.userId, songId: song._id })) }); } catch (e) { next(e); } });
-router.patch("/:songId", async (req, res, next) => { try { const song = await owned(req.params.songId, req.userId); if (!song) return res.status(404).json({ error: "Song not found." }); Object.assign(song, patchSchema.parse(req.body)); await song.save(); res.json({ song }); } catch (e) { next(e); } });
-router.delete("/:songId", async (req, res, next) => { try { const song = await owned(req.params.songId, req.userId); if (!song) return res.status(404).json({ error: "Song not found." }); await Bookmark.deleteMany({ songId: song._id }); await song.deleteOne(); res.status(204).end(); } catch (e) { next(e); } }); export default router;
+import { Router } from "express";
+import { z } from "zod";
+import mongoose from "mongoose";
+import { Song } from "../models/Song.js";
+import { Bookmark } from "../models/Bookmark.js";
+import { requireAuth } from "../middleware/auth.js";
+import { requestSongGeneration } from "../services/generation.js";
+const router = Router();
+router.use(requireAuth);
+const createSchema = z.object({
+  title: z.string().trim().max(120).optional(),
+  story: z.string().trim().min(10).max(10000),
+  genre: z.string().trim().min(1).max(60),
+  mood: z.string().trim().min(1).max(60),
+  language: z.string().trim().min(1).max(60).default("English"),
+  notes: z.string().trim().max(2000).optional(),
+});
+const patchSchema = z.object({ title: z.string().trim().min(1).max(120) });
+const owned = (id, userId) => Song.findOne({ _id: id, userId });
+router.post("/", async (req, res, next) => {
+  try {
+    const song = await Song.create({
+      ...createSchema.parse(req.body),
+      userId: req.userId,
+      status: "pending",
+    });
+    await requestSongGeneration(song);
+    res.status(201).json({ song });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/", async (req, res, next) => {
+  try {
+    const {
+      page = "1",
+      limit = "24",
+      search = "",
+      genre,
+      mood,
+      status,
+      sort = "newest",
+    } = req.query;
+    const filter = {
+      userId: req.userId,
+      ...(genre ? { genre } : {}),
+      ...(mood ? { mood } : {}),
+      ...(status ? { status } : {}),
+      ...(search
+        ? {
+            title: {
+              $regex: String(search).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+              $options: "i",
+            },
+          }
+        : {}),
+    };
+    const [songs, total, bookmarked] = await Promise.all([
+      Song.find(filter)
+        .sort({ createdAt: sort === "oldest" ? 1 : -1 })
+        .skip((Math.max(1, Number(page)) - 1) * Math.min(100, Number(limit)))
+        .limit(Math.min(100, Number(limit)))
+        .lean(),
+      Song.countDocuments(filter),
+      Bookmark.find({ userId: req.userId }).select("songId").lean(),
+    ]);
+    const ids = new Set(bookmarked.map((item) => String(item.songId)));
+    res.json({
+      songs: songs.map((song) => ({
+        ...song,
+        bookmarked: ids.has(String(song._id)),
+      })),
+      total,
+      page: Number(page),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/:songId", async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.songId))
+      return res.status(404).json({ error: "Song not found." });
+    const song = await owned(req.params.songId, req.userId).lean();
+    if (!song) return res.status(404).json({ error: "Song not found." });
+    res.json({
+      song,
+      bookmarked: Boolean(
+        await Bookmark.exists({ userId: req.userId, songId: song._id }),
+      ),
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+router.patch("/:songId", async (req, res, next) => {
+  try {
+    const song = await owned(req.params.songId, req.userId);
+    if (!song) return res.status(404).json({ error: "Song not found." });
+    Object.assign(song, patchSchema.parse(req.body));
+    await song.save();
+    res.json({ song });
+  } catch (e) {
+    next(e);
+  }
+});
+router.delete("/:songId", async (req, res, next) => {
+  try {
+    const song = await owned(req.params.songId, req.userId);
+    if (!song) return res.status(404).json({ error: "Song not found." });
+    await Bookmark.deleteMany({ songId: song._id });
+    await song.deleteOne();
+    res.status(204).end();
+  } catch (e) {
+    next(e);
+  }
+});
+export default router;
