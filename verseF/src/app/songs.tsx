@@ -43,12 +43,12 @@ export default function Songs() {
           </Text>
         ) : (
           songs.map((song) => (
-            <View key={song._id} className="mt-4 rounded-2xl bg-white p-5">
+            <Pressable key={song._id} onPress={() => router.push(`/song/${song._id}` as never)} className="mt-4 rounded-2xl bg-white p-5 active:opacity-70">
               <Text className="text-lg font-semibold text-[#241a17]">
                 {song.title || "Untitled MyVerse"}
               </Text>
               <Text className="mt-1 text-[#75665e]">
-                {song.genre} · {song.mood} · {song.status}
+                {song.genre} · {song.mood}{song.status !== "ready" ? ` · ${song.status.replace("_", " ")}` : ""}
               </Text>
               <Pressable
                 onPress={() =>
@@ -62,7 +62,7 @@ export default function Songs() {
                   {song.bookmarked ? "Remove bookmark" : "Bookmark"}
                 </Text>
               </Pressable>
-            </View>
+            </Pressable>
           ))
         )}
       </ScrollView>
