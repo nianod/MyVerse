@@ -16,3 +16,9 @@ export async function api<T>(
   }
   return response.status === 204 ? (undefined as T) : response.json();
 }
+
+export function assetUrl(path?: string) {
+  if (!path) return undefined;
+  if (/^https?:\/\//.test(path)) return path;
+  return `${API?.replace(/\/api\/?$/, "") || ""}${path}`;
+}
